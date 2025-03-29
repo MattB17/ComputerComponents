@@ -1,6 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+// The default starting position for the program counter (PC)
+#define PC_START = 0x3000
+
 // 16-bit machine, each memory location stores a 16-bit value
 // 2^16 = 65536 memory locations
 #define MEMORY_MAX (1 << 16)
