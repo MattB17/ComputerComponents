@@ -1,3 +1,6 @@
+#ifndef ARCHITECTURE_H
+#define ARCHITECTURE_H
+
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -60,3 +63,5 @@ enum OpCode {
   OP_LEA,     // load effective address
   OP_TRAP     // execute trap
 };
+
+#endif

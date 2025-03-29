@@ -8,10 +8,26 @@
  */
 
 #include "architecture.h"
+#include "instruction.h"
 
 int main(int argc, const char* argv[])
 {
-  // Load arguments
+  if (argc < 2)
+  {
+    // Show usage string
+    printf("lc3 [image-file1] ...\n");
+    exit(1);
+  }
+
+  // Check that the images can be read
+  for (int idx = 1; idx < argc; idx++)
+  {
+    if (!read_image(argv[idx]))
+    {
+      printf("Failed to load image: %s\n", argv[idx]);
+      exit(1);
+    }
+  }
   // Setup
 
   // initially load the zero flag into the condition register
@@ -25,16 +41,16 @@ int main(int argc, const char* argv[])
   {
     // Steps 1 and 2: fetch instruction pointed to by program counter
     // and then increment the program counter
-    uint16_t instruction = mem_read(regs[R_PC]++);
+    uint16_t currInstruction = mem_read(regs[R_PC]++);
 
     // Step 3: extract the opcode
-    uint16_t opcode = instruction >> 12;
+    uint16_t opcode = currInstruction >> 12;
 
     // Step 4: implement action based on opcode
     switch (opcode)
     {
       case OP_ADD:
-        // add instruction
+        executeAdd(currInstruction);
         break;
       case OP_AND:
         // and instruction
