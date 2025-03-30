@@ -36,6 +36,13 @@ void updateConditionFlags(uint16_t registerIdx)
   }
 }
 
+// 0x1FF is 111111111 in binary. So we are extracting the pc offset in the
+// 9 least significant bits and sign extending it to 16 bits.
+uint16_t signExtendPcOffset(uint16_t &currInstruction)
+{
+  return signExtend(currInstruction & 0x1FF, 9);
+}
+
 // the destination register (DR) is in in bits 11-9, so we remove all bits
 // less significant than the 9th bit, then bitwise-and with 7 which is 111
 // in binary to only get bits 11-9.
@@ -52,11 +59,11 @@ uint16_t extractFirstRegister(uint16_t &currInstruction)
   return (currInstruction >> 6) & 0x7;
 }
 
-// the mode flag is in in bit 5, so we remove all bits less significant than
-// the 5th bit, then bitwise-and with 1 which is 1 in binary to only get bit 5.
-uint16_t extractModeFlag(uint16_t &currInstruction)
+// To extract the bit at `bitIdx` we first remove all bits less significant
+// than `bitIdx` and then bitwise-and with 1 to get just that bit.
+uint16_t extractBit(uint16_t &currInstruction, short bitIdx)
 {
-  return (currInstruction >> 5) & 1;
+  return (currInstruction >> bitIdx) & 1;
 }
 
 /*
@@ -86,7 +93,7 @@ void executeAdd(uint16_t addInstruction)
 {
   uint16_t dr = extractDestinationRegister(addInstruction);
   unit16_t sr1 = extractFirstRegister(addInstruction);
-  uint16_t modeFlag = extractModeFlag(addInstruction);
+  uint16_t modeFlag = extractBit(addInstruction, 5);
 
   if (modeFlag)
   {
@@ -132,7 +139,7 @@ void executeAnd(uint16_t andInstruction)
 {
   uint16_t dr = extractDestinationRegister(andInstruction);
   unit16_t sr1 = extractFirstRegister(andInstruction);
-  uint16_t modeFlag = extractModeFlag(andInstruction);
+  uint16_t modeFlag = extractBit(andInstruction, 5);
 
   if (modeFlag)
   {
@@ -171,10 +178,7 @@ void executeAnd(uint16_t andInstruction)
 void executeLoadIndirect(uint16_t ldiInstruction)
 {
   uint16_t dr = extractDestinationRegister(ldiInstruction);
-
-  // 0x1FF is 111111111 in binary. So we are extracting the pc offset in the
-  // 9 least significant bits and sign extending it to 16 bits.
-  uint16_t pcOffset = signExtend(ldiInstruction & 0x1FF, 9);
+  uint16_t pcOffset = signExtendPcOffset(ldiInstruction);
 
   // The program counter is incremented when we fetch the instruction so we
   // can just add the offset to the current program counter and read the data
@@ -184,4 +188,37 @@ void executeLoadIndirect(uint16_t ldiInstruction)
   // register (dr).
   regs[dr] = mem_read(mem_read(regs[R_PC] + pcOffset));
   updateConditionFlags(dr);
+}
+
+/*
+ * The branch instruction has the following form:
+ *
+ *  15  12  11  10  9  8         0
+ * | 0000 | n | z | p | PCoffset9 |
+ *
+ * Bits 15-12 hold the branch opcode (0000)
+ * Bits 11, 10 and 9 hold the branch condition flags, we branch if any of the
+ * following are true:
+ * - the n bit (index 11) is set and the COND register is FL_NEG
+ * - the z bit (index 10) is set and the COND register is FL_ZRO
+ * - the p bit (index 9) is set and the COND register is FL_POS
+ *
+ * If any of the branch conditions are true we add the 9-bit PCoffset9 to the
+ * incremented program counter after sign extending to 16 bits
+ */
+void executeBranch(uint16_t branchInstruction)
+{
+  uint16_t nBit = extractBit(branchInstruction, 11);
+  uint16_t zBit = extractBit(branchInstruction, 10);
+  uint16_t pBit = extractBit(branchInstruction, 9);
+
+  uint16_t branchBit = nBit & (regs[R_COND] == FL_NEG);
+  branchBit |= zBit & (regs[R_COND] == FL_ZRO);
+  branchBit |= pBit & (regs[R_COND] == FL_POS);
+
+  if (branchBit)
+  {
+    uint16_t pcOffset = signExtendPcOffset(branchInstruction);
+    regs[R_PC] += pcOffset;
+  }
 }

@@ -59,7 +59,7 @@ int main(int argc, const char* argv[])
         // not instruction
         break;
       case OP_BR:
-        // branch instruction
+        executeBranch(currInstruction);
         break;
       case OP_JMP:
         // jump instruction
