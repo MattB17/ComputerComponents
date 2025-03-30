@@ -53,7 +53,7 @@ int main(int argc, const char* argv[])
         executeAdd(currInstruction);
         break;
       case OP_AND:
-        // and instruction
+        executeAnd(currInstruction);
         break;
       case OP_NOT:
         // not instruction
@@ -71,7 +71,7 @@ int main(int argc, const char* argv[])
         // load instruction
         break;
       case OP_LDI:
-        // load indirect instruction
+        executeLoadIndirect(currInstruction);
         break;
       case OP_LDR:
         // load register instruction
