@@ -9,4 +9,6 @@ void executeAnd(uint16_t andInstruction);
 
 void executeBranch(uint16_t branchInstruction);
 
+void executeJump(uint16_t jumpInstruction);
+
 #endif

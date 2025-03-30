@@ -43,20 +43,13 @@ uint16_t signExtendPcOffset(uint16_t &currInstruction)
   return signExtend(currInstruction & 0x1FF, 9);
 }
 
-// the destination register (DR) is in in bits 11-9, so we remove all bits
-// less significant than the 9th bit, then bitwise-and with 7 which is 111
-// in binary to only get bits 11-9.
-uint16_t extractDestinationRegister(uint16_t &currInstruction)
+// the index of a register is 3 bits (registers 0 to 7). So we specify the
+// end index of the register in the instruction and trim off all bits after
+// that, so now the 3 least significant bits of the result indexes the register
+// then we take the bitwise-and with 7 (111), which extracts these last 3 bits.
+uint16_t extractRegister(uint16_t &currInstruction, short endIdx)
 {
-  return (currInstruction >> 9) & 0x7;
-}
-
-// the first register (SR1) is in in bits 8-6, so we remove all bits
-// less significant than the 6th bit, then bitwise-and with 7 which is 111
-// in binary to only get bits 8-6.
-uint16_t extractFirstRegister(uint16_t &currInstruction)
-{
-  return (currInstruction >> 6) & 0x7;
+  return (currInstruction >> endIdx) & 0x7;
 }
 
 // To extract the bit at `bitIdx` we first remove all bits less significant
@@ -91,8 +84,8 @@ uint16_t extractBit(uint16_t &currInstruction, short bitIdx)
  */
 void executeAdd(uint16_t addInstruction)
 {
-  uint16_t dr = extractDestinationRegister(addInstruction);
-  unit16_t sr1 = extractFirstRegister(addInstruction);
+  uint16_t dr = extractRegister(addInstruction, 9);
+  unit16_t sr1 = extractRegister(addInstruction, 6);
   uint16_t modeFlag = extractBit(addInstruction, 5);
 
   if (modeFlag)
@@ -105,9 +98,8 @@ void executeAdd(uint16_t addInstruction)
   }
   else
   {
-    // We are in case 1, so the second register is in bits 2-0 which we can
-    // extract via bitwise and with 7, which is 111 in binary
-    uint16_t sr2 = addInstruction & 0x7;
+    // We are in case 1, so the second register is in bits 2-0
+    uint16_t sr2 = extractRegister(addInstruction, 0);
     regs[dr] = regs[sr1] + regs[sr2];
   }
   updateConditionFlags(dr);
@@ -137,8 +129,8 @@ void executeAdd(uint16_t addInstruction)
  */
 void executeAnd(uint16_t andInstruction)
 {
-  uint16_t dr = extractDestinationRegister(andInstruction);
-  unit16_t sr1 = extractFirstRegister(andInstruction);
+  uint16_t dr = extractRegister(andInstruction, 9);
+  unit16_t sr1 = extractRegister(andInstruction, 6);
   uint16_t modeFlag = extractBit(andInstruction, 5);
 
   if (modeFlag)
@@ -151,9 +143,8 @@ void executeAnd(uint16_t andInstruction)
   }
   else
   {
-    // We are in case 1, so the second register is in bits 2-0 which we can
-    // extract via bitwise and with 7, which is 111 in binary
-    uint16_t sr2 = andInstruction & 0x7;
+    // We are in case 1, so the second register is in bits 2-0
+    uint16_t sr2 = extractRegister(andInstruction, 0);
     regs[dr] = regs[sr1] & regs[sr2];
   }
   updateConditionFlags(dr);
@@ -177,7 +168,7 @@ void executeAnd(uint16_t andInstruction)
  */
 void executeLoadIndirect(uint16_t ldiInstruction)
 {
-  uint16_t dr = extractDestinationRegister(ldiInstruction);
+  uint16_t dr = extractRegister(ldiInstruction, 9);
   uint16_t pcOffset = signExtendPcOffset(ldiInstruction);
 
   // The program counter is incremented when we fetch the instruction so we
@@ -221,4 +212,24 @@ void executeBranch(uint16_t branchInstruction)
     uint16_t pcOffset = signExtendPcOffset(branchInstruction);
     regs[R_PC] += pcOffset;
   }
+}
+
+/*
+ * The jump instruction has the form:
+ *
+ *  15  12 11  9 8     6 5      0
+ * | 1100 | 000 | BaseR | 000000 |
+ *
+ * The opcode 1100 is stored in bits 1100
+ * Bits 11 to 9 and 5 to 0 are unused.
+ * The register holding the address to jump to is BaseR in bits 8 to 6.
+ *
+ * This is an unconditional jump.
+ *
+ * NOTE: function return is just a jump command with BaseR set to 111.
+ */
+void executeJump(uint16_t jumpInstruction)
+{
+  uint16_t baseR = extractRegister(jumpInstruction, 6);
+  regs[R_PC] = regs[baseR];
 }

@@ -62,7 +62,7 @@ int main(int argc, const char* argv[])
         executeBranch(currInstruction);
         break;
       case OP_JMP:
-        // jump instruction
+        executeJump(currInstruction);
         break;
       case OP_JSR:
         // jump register instruction
@@ -94,8 +94,8 @@ int main(int argc, const char* argv[])
       case OP_RES:
       case OP_RTI:
       default:
-        // bad opcode
-        break;
+        printf("Invalid opcode received: %d", opcode);
+        exit(1);
     }
   }
 
