@@ -151,37 +151,6 @@ void executeAnd(uint16_t andInstruction)
 }
 
 /*
- * Load Indirect Instruction
- *
- * Used to load a value from a location in memory into a register.
- * Load Indirect Instructions are off the form:
- *
- *  15  12 11 9 8          0
- * | 1010 | DR | PCoffset9 |
- *
- * Bits 15-12 store the opcode 1010
- * Bits 11 to 9 store the destination register
- * The remaining 9 bits store the program counter offset
- * - this number needs to be extended to 16 bits
- * - then added to the increment program counter (PC) to get a memory
- *   address from which to read from
- */
-void executeLoadIndirect(uint16_t ldiInstruction)
-{
-  uint16_t dr = extractRegister(ldiInstruction, 9);
-  uint16_t pcOffset = signExtendPcOffset(ldiInstruction);
-
-  // The program counter is incremented when we fetch the instruction so we
-  // can just add the offset to the current program counter and read the data
-  // stored at that memory location (the first mem_read). That data is an
-  // address pointing to where the actual data is stored, so we read that
-  // address (the second mem_read) and load the value into the destination
-  // register (dr).
-  regs[dr] = mem_read(mem_read(regs[R_PC] + pcOffset));
-  updateConditionFlags(dr);
-}
-
-/*
  * The branch instruction has the following form:
  *
  *  15  12  11  10  9  8         0
@@ -232,4 +201,105 @@ void executeJump(uint16_t jumpInstruction)
 {
   uint16_t baseR = extractRegister(jumpInstruction, 6);
   regs[R_PC] = regs[baseR];
+}
+
+/*
+ * This method passes control to a subroutine.
+ *
+ * We first save the program counter to R7 so we can link back to the calling
+ * subroutine.
+ *
+ * Then we need to load the program counter with the first address of the first
+ * instruction in the called subroutine. There are 2 forms of this command:
+ *
+ *  15  12  11 10         0
+ * | 0100 | 1 | PCoffset11 |
+ *
+ *  15  12  11 10 9 8     6 5      0
+ * | 0100 | 0 | 00 | BaseR | 000000 |
+ *
+ * In both cases bits 15-12 store the opcode
+ *
+ * If bit 11 is 1 then we are in the first case and we sign extend the offset
+ * in bits 10-0 to 16 bits and add it to the incremented program counter.
+ *
+ * If instead bit 11 is 0 then we extract the base register from bits 8-6 and
+ * set the program counter to the address in this register. All other bits are
+ * unused.
+ */
+void executeJumpToSubroutine(uint16_t jumpInstruction)
+{
+  // Save current program counter in R7 (this PC points to current instruction
+  // in the calling subroutine so we can come back here after).
+  regs[R_7] = regs[PC];
+
+  uint16_t modeBit = extractBit(jumpInstruction, 11);
+
+  if (modeBit)
+  {
+    uint16_t pcOffset = signExtend(jumpInstruction & 0x7FF, 11);
+    regs[PC] += pcOffset;
+  }
+  else
+  {
+    uint16_t baseR = extractRegister(jumpInstruction, 6);
+    regs[PC] = regs[baseR];
+  }
+}
+
+/*
+ * Load Indirect Instruction
+ *
+ * Used to load a value from a location in memory into a register.
+ * Load Indirect Instructions are off the form:
+ *
+ *  15  12 11 9 8          0
+ * | 1010 | DR | PCoffset9 |
+ *
+ * Bits 15-12 store the opcode 1010
+ * Bits 11 to 9 store the destination register
+ * The remaining 9 bits store the program counter offset
+ * - this number needs to be extended to 16 bits
+ * - then added to the increment program counter (PC) to get a memory
+ *   address from which to read from
+ */
+void executeLoadIndirect(uint16_t ldiInstruction)
+{
+  uint16_t dr = extractRegister(ldiInstruction, 9);
+  uint16_t pcOffset = signExtendPcOffset(ldiInstruction);
+
+  // The program counter is incremented when we fetch the instruction so we
+  // can just add the offset to the current program counter and read the data
+  // stored at that memory location (the first mem_read). That data is an
+  // address pointing to where the actual data is stored, so we read that
+  // address (the second mem_read) and load the value into the destination
+  // register (dr).
+  regs[dr] = mem_read(mem_read(regs[R_PC] + pcOffset));
+
+  updateConditionFlags(dr);
+}
+
+/*
+ * The Load instruction has the following form:
+ *
+ *  15  12 11 9 8          0
+ * | 0010 | DR | PCoffset9 |
+ *
+ * Bits 15-12 store the opcode.
+ * Bits 11-9 store the destination register
+ *
+ * The PC offset stored in bits 8-0 is sign extended to 16 bits and added to
+ * the program counter (PC) to get an address that is read from memory and
+ * stored in the destination register.
+ */
+void executeLoad(uint16_t loadInstruction)
+{
+  uint16_t dr = extractRegister(loadInstruction, 9);
+  uint16_t pcOffset = signExtend(loadInstruction & 0x1FF, 9);
+
+  // We read from the memory at the address specified by the program counter
+  // plus the offset and store that in the destination register.
+  regs[dr] = mem_read(regs[R_PC] + pcOffset);
+
+  updateConditionFlags(dr);
 }

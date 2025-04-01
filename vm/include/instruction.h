@@ -3,12 +3,16 @@
 
 void executeAdd(uint16_t addInstruction);
 
-void executeLoadIndirect(uint16_t ldiInstruction);
-
 void executeAnd(uint16_t andInstruction);
 
 void executeBranch(uint16_t branchInstruction);
 
 void executeJump(uint16_t jumpInstruction);
+
+void executeJumpToSubroutine(uint16_t jumpInstruction);
+
+void executeLoadIndirect(uint16_t ldiInstruction);
+
+void executeLoad(uint16_t loadInstruction);
 
 #endif

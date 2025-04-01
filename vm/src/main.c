@@ -65,10 +65,10 @@ int main(int argc, const char* argv[])
         executeJump(currInstruction);
         break;
       case OP_JSR:
-        // jump register instruction
+        executeJumpToSubroutine(currInstruction);
         break;
       case OP_LD:
-        // load instruction
+        executeLoad(currInstruction);
         break;
       case OP_LDI:
         executeLoadIndirect(currInstruction);
