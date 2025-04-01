@@ -248,6 +248,31 @@ void executeJumpToSubroutine(uint16_t jumpInstruction)
 }
 
 /*
+ * The Load instruction has the following form:
+ *
+ *  15  12 11 9 8          0
+ * | 0010 | DR | PCoffset9 |
+ *
+ * Bits 15-12 store the opcode.
+ * Bits 11-9 store the destination register
+ *
+ * The PC offset stored in bits 8-0 is sign extended to 16 bits and added to
+ * the program counter (PC) to get an address that is read from memory and
+ * stored in the destination register.
+ */
+void executeLoad(uint16_t loadInstruction)
+{
+  uint16_t dr = extractRegister(loadInstruction, 9);
+  uint16_t pcOffset = signExtend(loadInstruction & 0x1FF, 9);
+
+  // We read from the memory at the address specified by the program counter
+  // plus the offset and store that in the destination register.
+  regs[dr] = mem_read(regs[R_PC] + pcOffset);
+
+  updateConditionFlags(dr);
+}
+
+/*
  * Load Indirect Instruction
  *
  * Used to load a value from a location in memory into a register.
@@ -280,26 +305,59 @@ void executeLoadIndirect(uint16_t ldiInstruction)
 }
 
 /*
- * The Load instruction has the following form:
+ * The Load Register instruction has the following form
  *
- *  15  12 11 9 8          0
- * | 0010 | DR | PCoffset9 |
+ *  15  12 11 9 8     6 5       0
+ * | 0110 | DR | BaseR | offset6 |
  *
- * Bits 15-12 store the opcode.
- * Bits 11-9 store the destination register
+ * The fields are as follows
+ * - bits 15-12 store the opcode
+ * - bits 11-9 store the destination register where the result will be stored
+ * - bits 8-6 give the base register containing an address
+ * - bits 5-0 contain a 6-bit offset to be added to the base register address
  *
- * The PC offset stored in bits 8-0 is sign extended to 16 bits and added to
- * the program counter (PC) to get an address that is read from memory and
- * stored in the destination register.
+ * we sign extend the 6-bit offset and add it to the address in the base
+ * register. Then the value at that memory address is read and stored in the
+ * destination register.
  */
-void executeLoad(uint16_t loadInstruction)
+void executeLoadRegister(uint16_t ldrInstruction)
 {
-  uint16_t dr = extractRegister(loadInstruction, 9);
-  uint16_t pcOffset = signExtend(loadInstruction & 0x1FF, 9);
+  uint16_t dr = extractRegister(ldrInstruction, 9);
+  uint16_t baseR = extractRegister(ldrInstruction, 6);
+  // The offset is in the 6 least significant bits and 0x3F is 111111 in binary
+  // so it extracts those 6 bits and then we sign extend to 16 bits.
+  uint16_t offset = signExtend(ldrInstruction & 0x3F, 6);
 
-  // We read from the memory at the address specified by the program counter
-  // plus the offset and store that in the destination register.
-  regs[dr] = mem_read(regs[R_PC] + pcOffset);
+  regs[dr] = mem_read(regs[baseR] + offset);
 
   updateConditionFlags(dr);
 }
+
+/*
+ * The load effective address (LEA) instruction has the following form:
+ *
+ *  15  12 11 9 8         0
+ * | 1110 | DR | PCoffset9 |
+ *
+ * The 3 fields are
+ * - 1110 is the opcode in bits 15-12
+ * - the destination register is in bits 11-9
+ * - the program counter offset is 9 bits in bits 8-0
+ *
+ * In this instruction we load an address into the destination register, given
+ * by the incremented PC counter plus the offset sign extended to 16 bits.
+ */
+ void executeLoadEffectiveAddress(uint16_t leaInstruction)
+ {
+   uint16_t dr = extractRegister(leaInstruction, 9);
+   // the offset is the 9 most insignificant bits so we bitwise-and with 0x1FF
+   // which is 111111111 to get these 9 bits and then sign extend.
+   uint16_t pcOffset = signExtend(leaInstruction & 0x1FF, 9);
+
+   // the program counter will have already been incremented by the time we
+   // get here so we simply take that address, add the offset and store in the
+   // destination register
+   regs[dr] = regs[R_PC] + pcOffset;
+
+   updateConditionFlags(dr);
+ }

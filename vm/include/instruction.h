@@ -11,8 +11,12 @@ void executeJump(uint16_t jumpInstruction);
 
 void executeJumpToSubroutine(uint16_t jumpInstruction);
 
+void executeLoad(uint16_t loadInstruction);
+
 void executeLoadIndirect(uint16_t ldiInstruction);
 
-void executeLoad(uint16_t loadInstruction);
+void executeLoadRegister(uint16_t ldrInstruction);
+
+void executeLoadEffectiveAddress(uint16_t leaInstruction);
 
 #endif

@@ -74,10 +74,10 @@ int main(int argc, const char* argv[])
         executeLoadIndirect(currInstruction);
         break;
       case OP_LDR:
-        // load register instruction
+        executeLoadRegister(currInstruction);
         break;
       case OP_LEA:
-        // load effective address instruction
+        executeLoadEffectiveAddress(currInstruction);
         break;
       case OP_ST:
         // store instruction
