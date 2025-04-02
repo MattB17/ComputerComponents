@@ -151,6 +151,30 @@ void executeAnd(uint16_t andInstruction)
 }
 
 /*
+ * The not instruction has the following form:
+ *
+ *  15  12 11 9 8  6  5  4     0
+ * | 1001 | DR | SR | 1 | 11111 |
+ *
+ * The fields are as follows:
+ * - the opcode is stored in bits 15-12
+ * - the destination register is in bits 11-9
+ * - the source register is bits 8-6
+ * - the other bits are unused
+ *
+ * For this instruction we take the bitwise complement of the value in the
+ * source register and store that in the destination register.
+ */
+void executeNot(uint16_t notInstruction)
+{
+  uint16_t dr = extractRegister(notInstruction, 9);
+  uint16_t sr = extractRegister(notInstruction, 6);
+
+  regs[dr] = ~regs[sr];
+  updateConditionFlags(dr);
+}
+
+/*
  * The branch instruction has the following form:
  *
  *  15  12  11  10  9  8         0
@@ -347,17 +371,46 @@ void executeLoadRegister(uint16_t ldrInstruction)
  * In this instruction we load an address into the destination register, given
  * by the incremented PC counter plus the offset sign extended to 16 bits.
  */
- void executeLoadEffectiveAddress(uint16_t leaInstruction)
- {
-   uint16_t dr = extractRegister(leaInstruction, 9);
-   // the offset is the 9 most insignificant bits so we bitwise-and with 0x1FF
-   // which is 111111111 to get these 9 bits and then sign extend.
-   uint16_t pcOffset = signExtend(leaInstruction & 0x1FF, 9);
+void executeLoadEffectiveAddress(uint16_t leaInstruction)
+{
+  uint16_t dr = extractRegister(leaInstruction, 9);
+  // the offset is the 9 most insignificant bits so we bitwise-and with 0x1FF
+  // which is 111111111 to get these 9 bits and then sign extend.
+  uint16_t pcOffset = signExtend(leaInstruction & 0x1FF, 9);
 
-   // the program counter will have already been incremented by the time we
-   // get here so we simply take that address, add the offset and store in the
-   // destination register
-   regs[dr] = regs[R_PC] + pcOffset;
+  // the program counter will have already been incremented by the time we
+  // get here so we simply take that address, add the offset and store in the
+  // destination register
+  regs[dr] = regs[R_PC] + pcOffset;
 
-   updateConditionFlags(dr);
- }
+  updateConditionFlags(dr);
+}
+
+/*
+ * The store instruction has the following form:
+ *
+ *  15  12 11 9 8         0
+ * | 0011 | SR | PCoffset9 |
+ *
+ * The components of the command are:
+ * - 0011 is the opcode in bits 15-12
+ * - the source register is bits 11-9
+ * - the program counter offset is the last 9 bits
+ *
+ * For this instruction we get an address by adding the sign extended (to 16
+ * bits) offset to the incremented program counter and store the contents of
+ * the source register in that memory address.
+ */
+void executeStore(uint16_t storeInstruction)
+{
+  uint16_t sr = extractRegister(storeInstruction, 9);
+  // The offset is the 9 least significant bits so we bitwise-and the
+  // instruction with 0x1FF which is 111111111 in binary and then sign extend
+  // to 16 bits.
+  uint16_t pcOffset = signExtend(storeInstruction & 0x1FF, 9);
+
+  // Write the contents of the source register into the appropriate memory
+  // address. The program counter was already incremented so we just add the
+  // offset.
+  mem_write(regs[PC] + pcOffset, regs[sr]);
+}

@@ -56,7 +56,7 @@ int main(int argc, const char* argv[])
         executeAnd(currInstruction);
         break;
       case OP_NOT:
-        // not instruction
+        executeNot(currInstruction);
         break;
       case OP_BR:
         executeBranch(currInstruction);
@@ -80,7 +80,7 @@ int main(int argc, const char* argv[])
         executeLoadEffectiveAddress(currInstruction);
         break;
       case OP_ST:
-        // store instruction
+        executeStore(currInstruction);
         break;
       case OP_STI:
         // store indirect instruction

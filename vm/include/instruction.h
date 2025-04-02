@@ -5,6 +5,8 @@ void executeAdd(uint16_t addInstruction);
 
 void executeAnd(uint16_t andInstruction);
 
+void executeNot(uint16_t notInstruction);
+
 void executeBranch(uint16_t branchInstruction);
 
 void executeJump(uint16_t jumpInstruction);
@@ -18,5 +20,7 @@ void executeLoadIndirect(uint16_t ldiInstruction);
 void executeLoadRegister(uint16_t ldrInstruction);
 
 void executeLoadEffectiveAddress(uint16_t leaInstruction);
+
+void executeStore(uint16_t storeInstruction);
 
 #endif
