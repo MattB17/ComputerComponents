@@ -23,4 +23,8 @@ void executeLoadEffectiveAddress(uint16_t leaInstruction);
 
 void executeStore(uint16_t storeInstruction);
 
+void executeStoreIndirect(uint16_t stiInstruction);
+
+void executeStoreRegister(uint16_t strInstruction);
+
 #endif

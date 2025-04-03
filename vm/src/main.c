@@ -83,10 +83,10 @@ int main(int argc, const char* argv[])
         executeStore(currInstruction);
         break;
       case OP_STI:
-        // store indirect instruction
+        executeStoreIndirect(currInstruction);
         break;
       case OP_STR:
-        // store register instruction
+        executeStoreRegister(currInstruction);
         break;
       case OP_TRAP:
         // trap instruction

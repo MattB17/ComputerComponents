@@ -414,3 +414,63 @@ void executeStore(uint16_t storeInstruction)
   // offset.
   mem_write(regs[PC] + pcOffset, regs[sr]);
 }
+
+/*
+ * The store indirect instruction has the following form:
+ *
+ *  15  12 11 9 8         0
+ * | 1011 | SR | PCoffset9 |
+ * The components of the command are:
+ * - 1011 is the opcode in bits 15-12
+ * - the source register is bits 11-9
+ * - the program counter offset is the last 9 bits
+ *
+ * We sign extend the offset to 16 bits and add this to the incremented program
+ * counter to get an address, we then read the value from memory at that
+ * address to get another address and write the contents of the source register
+ * to the memory location specified by this second address.
+ */
+void executeStoreIndirect(uint16_t stiInstruction)
+{
+  uint16_t sr = extractRegister(stiInstruction, 9);
+  // the offset is in the 9 least significant bits so we take the bitwise-and
+  // with 0x1FF which is 111111111 in binary to extract these 9 bits and then
+  // sign extend to 16 bits.
+  uint16_t pcOffset = signExtend(stiInstruction & 0x1FF, 9);
+
+  // The program counter was already incremented, so we add the offset to it
+  // and read from the resulting memory location to get the destination address,
+  // then we write the contents of the source register to this destination
+  // address.
+  mem_write(mem_read(regs[PC] + pcOffset), regs[sr]);
+}
+
+/*
+ * The store register instruction has the following form
+ *
+ *  15  12 11 9 8     6 5       0
+ * | 0111 | SR | BaseR | offset6 |
+ *
+ * The 4 fields in this instruction are:
+ * - 0111 is the opcode in bits 15-12
+ * - the source register is stored in bits 11-9
+ * - the base register is in bits 8 to 6
+ * - the 6 least significant bits are the offset address
+ *
+ * We retrieve an address from the base register and then add the offset to
+ * it after sign extending to 16 bits to get a final address. The contents of
+ * the source register are then written to this address.
+ */
+void executeStoreRegister(uint16_t strInstruction)
+{
+  uint16_t sr = extractRegister(strInstruction, 9);
+  uint16_t baseR = extractRegister(strInstruction, 6);
+  // The offset is in the 6 least significant bits so we take the bitwise-and
+  // with 0x3F which is 111111 to extract these 6 bits, we then sign extend to
+  // 16 bits.
+  uint16_t offset = signExtend(strInstruction & 0x3F, 6);
+
+  // We write the contents of the source register into the memory address
+  // specified by in baseR plus the offset.
+  mem_write(regs[baseR] + offset, regs[sr])
+}
