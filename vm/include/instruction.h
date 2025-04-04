@@ -1,3 +1,4 @@
+// A set of methods to execute 16-bit machine instructions.
 #ifndef INSTRUCTION_H
 #define INSTRUCTION_H
 

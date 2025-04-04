@@ -9,6 +9,7 @@
 
 #include "architecture.h"
 #include "instruction.h"
+#include "trap.h"
 
 int main(int argc, const char* argv[])
 {
@@ -89,7 +90,7 @@ int main(int argc, const char* argv[])
         executeStoreRegister(currInstruction);
         break;
       case OP_TRAP:
-        // trap instruction
+        handleTrap(currInstruction);
         break:
       case OP_RES:
       case OP_RTI:
