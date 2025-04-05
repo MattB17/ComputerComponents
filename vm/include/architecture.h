@@ -5,7 +5,10 @@
 #include <stdio.h>
 
 // The default starting position for the program counter (PC)
-#define PC_START = 0x3000
+#define PC_START 0x3000
+
+// Tells whether the program is running or not.
+int RUNNING = 0;
 
 // 16-bit machine, each memory location stores a 16-bit value
 // 2^16 = 65536 memory locations
@@ -77,5 +80,25 @@ enum TrapCode
   TRAP_PUTSP = 0x24,  // Output a byte string
   TRAP_HALT = 0x25    // Halt the program
 };
+
+// Memory Mapped Registers.
+// A special address is reserved for these registers in memory.
+enum MemRegisters
+{
+  MR_KBSR = 0xFE00,   // Keyboard status register
+  MR_KBDR = 0xFE02    // Keyboard data register
+}
+
+struct termios originalTio;
+
+void disableInputBuffering();
+
+void restoreInputBuffering();
+
+uint16_t checkKey();
+
+void memWrite(uint16_t address, uint16_t addressVal);
+
+void memRead(uint16_t address);
 
 #endif

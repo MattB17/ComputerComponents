@@ -101,7 +101,7 @@ void halt()
 {
   puts("Execution halted");
   fflush(stdout);
-  abort();
+  RUNNING = 0;
 }
 
 /*

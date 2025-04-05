@@ -95,8 +95,8 @@ int main(int argc, const char* argv[])
   // Set the program counter to the starting position
   regs[R_PC] = PC_START;
 
-  int running = 1;
-  while (running == 1)
+  RUNNING = 1;
+  while (RUNNING)
   {
     // Steps 1 and 2: fetch instruction pointed to by program counter
     // and then increment the program counter
