@@ -11,6 +11,63 @@
 #include "instruction.h"
 #include "trap.h"
 
+/*
+ * Used to swap between big endian and little endian.
+ *
+ * LC3 programs are big endian but most computers are little endian.
+ */
+uint16_t swap16(uint16_t x)
+{
+  return (x << 8) | (x >> 8);
+}
+
+/*
+ * Used to read a file representing the image to be run by the VM.
+ */
+void readImageFile(FILE* file)
+{
+  // Origin specifies where in memory to place the image
+  uint16_t origin;
+  // Read the first 16 bits from the file and place in origin
+  fread(&origin, sizeof(origin), 1, file);
+  // swap to little endian
+  origin = swap16(origin);
+
+  // Now we know to place the file starting at origin in our memory.
+  // As memory has a finite size, we know the maximum size we can read from
+  // the file.
+  uint16_t maxRead = MEMORY_MAX - origin;
+  // The starting address to write the program to.
+  uint16_t *instructionPointer = memory + origin;
+  // Now we read the entire program into memory (up to maxRead size) starting
+  // from the instructionPointer.
+  size_t instructionCount = fread(
+    instructionPointer, sizeof(uint16_t), maxRead, file);
+
+  // Lastly, for each instruction we need to swap from big endian to little
+  // endian, so we loop through starting from the origin.
+  while (instructionCount-- > 0)
+  {
+    *instructionPointer = swap16(*instructionPointer);
+    instructionPointer++;
+  }
+}
+
+/*
+ * A convenient wrapper around readImageFile that accepts a file path.
+ */
+int readImage(const char* imagePath)
+{
+  FILE* file = fopen(imagePath, "rb");
+  if (!file)
+  {
+    return 0;
+  }
+  readImageFile(file);
+  fclose(file);
+  return 1;
+}
+
 int main(int argc, const char* argv[])
 {
   if (argc < 2)
@@ -20,10 +77,11 @@ int main(int argc, const char* argv[])
     exit(1);
   }
 
-  // Check that the images can be read
+  // Check that the images can be read.
   for (int idx = 1; idx < argc; idx++)
   {
-    if (!read_image(argv[idx]))
+    // We read each image into memory, throwing an error if it can't be read.
+    if (!readImage(argv[idx]))
     {
       printf("Failed to load image: %s\n", argv[idx]);
       exit(1);
