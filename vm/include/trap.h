@@ -2,6 +2,6 @@
 #ifndef TRAP_H
 #define TRAP_H
 
-void handleTrap(uint16_t trapInstruction);
+int handleTrap(uint16_t trapInstruction);
 
 #endif

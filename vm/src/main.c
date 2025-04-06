@@ -38,7 +38,7 @@ void readImageFile(FILE* file)
   // the file.
   uint16_t maxRead = MEMORY_MAX - origin;
   // The starting address to write the program to.
-  uint16_t *instructionPointer = memory + origin;
+  uint16_t *instructionPointer = mem + origin;
   // Now we read the entire program into memory (up to maxRead size) starting
   // from the instructionPointer.
   size_t instructionCount = fread(
@@ -68,12 +68,19 @@ int readImage(const char* imagePath)
   return 1;
 }
 
+void handleInterrupt(int signal)
+{
+  restoreInputBuffering();
+  printf("\n");
+  exit(1);
+}
+
 int main(int argc, const char* argv[])
 {
   if (argc < 2)
   {
     // Show usage string
-    printf("lc3 [image-file1] ...\n");
+    printf("Incorrect usage! Correct usage: lc3-vm [image-file1] ...\n");
     exit(1);
   }
 
@@ -87,7 +94,9 @@ int main(int argc, const char* argv[])
       exit(1);
     }
   }
-  // Setup
+
+  signal(SIGINT, handleInterrupt);
+  disableInputBuffering();
 
   // initially load the zero flag into the condition register
   regs[R_COND] = FL_ZRO;
@@ -95,12 +104,12 @@ int main(int argc, const char* argv[])
   // Set the program counter to the starting position
   regs[R_PC] = PC_START;
 
-  RUNNING = 1;
-  while (RUNNING)
+  int running = 1;
+  while (running)
   {
     // Steps 1 and 2: fetch instruction pointed to by program counter
     // and then increment the program counter
-    uint16_t currInstruction = mem_read(regs[R_PC]++);
+    uint16_t currInstruction = memRead(regs[R_PC]++);
 
     // Step 3: extract the opcode
     uint16_t opcode = currInstruction >> 12;
@@ -148,8 +157,8 @@ int main(int argc, const char* argv[])
         executeStoreRegister(currInstruction);
         break;
       case OP_TRAP:
-        handleTrap(currInstruction);
-        break:
+        running = handleTrap(currInstruction);
+        break;
       case OP_RES:
       case OP_RTI:
       default:
@@ -158,5 +167,5 @@ int main(int argc, const char* argv[])
     }
   }
 
-  // Shutdown VM
+  restoreInputBuffering();
 }

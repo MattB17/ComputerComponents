@@ -3,12 +3,18 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <signal.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/termios.h>
+#include <sys/mman.h>
+
 
 // The default starting position for the program counter (PC)
 #define PC_START 0x3000
-
-// Tells whether the program is running or not.
-int RUNNING = 0;
 
 // 16-bit machine, each memory location stores a 16-bit value
 // 2^16 = 65536 memory locations
@@ -87,9 +93,11 @@ enum MemRegisters
 {
   MR_KBSR = 0xFE00,   // Keyboard status register
   MR_KBDR = 0xFE02    // Keyboard data register
-}
+};
 
 struct termios originalTio;
+
+void updateConditionFlags(uint16_t registerIdx);
 
 void disableInputBuffering();
 
@@ -99,6 +107,6 @@ uint16_t checkKey();
 
 void memWrite(uint16_t address, uint16_t addressVal);
 
-void memRead(uint16_t address);
+uint16_t memRead(uint16_t address);
 
 #endif

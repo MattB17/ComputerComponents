@@ -85,7 +85,7 @@ void trapPutsp()
     currChar = currChar >> 8;
     if (currChar) {
       putc((char) currChar, stdout);
-      c++
+      c++;
     } else {
       break;
     }
@@ -101,7 +101,6 @@ void halt()
 {
   puts("Execution halted");
   fflush(stdout);
-  RUNNING = 0;
 }
 
 /*
@@ -115,8 +114,11 @@ void halt()
  * - bits 11-8 are unused
  * - bits 7-0 identify the trap code specifying what trap routine should
  *   be executed.
+ *
+ * It returns an int specifying whether the vm is still in a running state
+ * after the trap routine.
  */
-void handleTrap(uint16_t trapInstruction)
+int handleTrap(uint16_t trapInstruction)
 {
   // Store the current value of the program counter in R_7 before jumping to
   // the trap routine so we can load this value again when we execute the
@@ -144,6 +146,7 @@ void handleTrap(uint16_t trapInstruction)
       break;
     case TRAP_HALT:
       halt();
-      break;
+      return 0;
   }
+  return 1;
 }

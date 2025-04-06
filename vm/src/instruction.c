@@ -18,27 +18,9 @@ uint16_t signExtend(uint16_t x, int bitCount)
   return x;
 }
 
-void updateConditionFlags(uint16_t registerIdx)
-{
-  if (regs[registerIdx] == 0)
-  {
-    regs[R_COND] = FL_ZRO;
-  }
-  // Removes the 15 most significant bits, leaving only the most significant
-  // bit. If this is 1 then it is a negative number using 2's complement.
-  else if (regs[registerIdx] >> 15)
-  {
-    regs[R_COND] = FL_NEG;
-  }
-  else
-  {
-    regs[R_COND] = FL_POS;
-  }
-}
-
 // 0x1FF is 111111111 in binary. So we are extracting the pc offset in the
 // 9 least significant bits and sign extending it to 16 bits.
-uint16_t signExtendPcOffset(uint16_t &currInstruction)
+uint16_t signExtendPcOffset(uint16_t currInstruction)
 {
   return signExtend(currInstruction & 0x1FF, 9);
 }
@@ -47,14 +29,14 @@ uint16_t signExtendPcOffset(uint16_t &currInstruction)
 // end index of the register in the instruction and trim off all bits after
 // that, so now the 3 least significant bits of the result indexes the register
 // then we take the bitwise-and with 7 (111), which extracts these last 3 bits.
-uint16_t extractRegister(uint16_t &currInstruction, short endIdx)
+uint16_t extractRegister(uint16_t currInstruction, short endIdx)
 {
   return (currInstruction >> endIdx) & 0x7;
 }
 
 // To extract the bit at `bitIdx` we first remove all bits less significant
 // than `bitIdx` and then bitwise-and with 1 to get just that bit.
-uint16_t extractBit(uint16_t &currInstruction, short bitIdx)
+uint16_t extractBit(uint16_t currInstruction, short bitIdx)
 {
   return (currInstruction >> bitIdx) & 1;
 }
@@ -85,7 +67,7 @@ uint16_t extractBit(uint16_t &currInstruction, short bitIdx)
 void executeAdd(uint16_t addInstruction)
 {
   uint16_t dr = extractRegister(addInstruction, 9);
-  unit16_t sr1 = extractRegister(addInstruction, 6);
+  uint16_t sr1 = extractRegister(addInstruction, 6);
   uint16_t modeFlag = extractBit(addInstruction, 5);
 
   if (modeFlag)
@@ -130,7 +112,7 @@ void executeAdd(uint16_t addInstruction)
 void executeAnd(uint16_t andInstruction)
 {
   uint16_t dr = extractRegister(andInstruction, 9);
-  unit16_t sr1 = extractRegister(andInstruction, 6);
+  uint16_t sr1 = extractRegister(andInstruction, 6);
   uint16_t modeFlag = extractBit(andInstruction, 5);
 
   if (modeFlag)
@@ -255,19 +237,19 @@ void executeJumpToSubroutine(uint16_t jumpInstruction)
 {
   // Save current program counter in R7 (this PC points to current instruction
   // in the calling subroutine so we can come back here after).
-  regs[R_7] = regs[PC];
+  regs[R_7] = regs[R_PC];
 
   uint16_t modeBit = extractBit(jumpInstruction, 11);
 
   if (modeBit)
   {
     uint16_t pcOffset = signExtend(jumpInstruction & 0x7FF, 11);
-    regs[PC] += pcOffset;
+    regs[R_PC] += pcOffset;
   }
   else
   {
     uint16_t baseR = extractRegister(jumpInstruction, 6);
-    regs[PC] = regs[baseR];
+    regs[R_PC] = regs[baseR];
   }
 }
 
@@ -291,7 +273,7 @@ void executeLoad(uint16_t loadInstruction)
 
   // We read from the memory at the address specified by the program counter
   // plus the offset and store that in the destination register.
-  regs[dr] = mem_read(regs[R_PC] + pcOffset);
+  regs[dr] = memRead(regs[R_PC] + pcOffset);
 
   updateConditionFlags(dr);
 }
@@ -323,7 +305,7 @@ void executeLoadIndirect(uint16_t ldiInstruction)
   // address pointing to where the actual data is stored, so we read that
   // address (the second mem_read) and load the value into the destination
   // register (dr).
-  regs[dr] = mem_read(mem_read(regs[R_PC] + pcOffset));
+  regs[dr] = memRead(memRead(regs[R_PC] + pcOffset));
 
   updateConditionFlags(dr);
 }
@@ -352,7 +334,7 @@ void executeLoadRegister(uint16_t ldrInstruction)
   // so it extracts those 6 bits and then we sign extend to 16 bits.
   uint16_t offset = signExtend(ldrInstruction & 0x3F, 6);
 
-  regs[dr] = mem_read(regs[baseR] + offset);
+  regs[dr] = memRead(regs[baseR] + offset);
 
   updateConditionFlags(dr);
 }
@@ -412,7 +394,7 @@ void executeStore(uint16_t storeInstruction)
   // Write the contents of the source register into the appropriate memory
   // address. The program counter was already incremented so we just add the
   // offset.
-  mem_write(regs[PC] + pcOffset, regs[sr]);
+  memWrite(regs[R_PC] + pcOffset, regs[sr]);
 }
 
 /*
@@ -442,7 +424,7 @@ void executeStoreIndirect(uint16_t stiInstruction)
   // and read from the resulting memory location to get the destination address,
   // then we write the contents of the source register to this destination
   // address.
-  mem_write(mem_read(regs[PC] + pcOffset), regs[sr]);
+  memWrite(memRead(regs[R_PC] + pcOffset), regs[sr]);
 }
 
 /*
@@ -472,5 +454,5 @@ void executeStoreRegister(uint16_t strInstruction)
 
   // We write the contents of the source register into the memory address
   // specified by in baseR plus the offset.
-  mem_write(regs[baseR] + offset, regs[sr])
+  memWrite(regs[baseR] + offset, regs[sr]);
 }
